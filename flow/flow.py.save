@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#TODO: Internal events naming and processing
+import paho.mqtt.client as mqtt
+
+from eventsmanager import EventsManager
+from usbportwatcher import USBPortWatcher
+from usbdevicemanager import USBDeviceManager
+from mqttserviceprovider import MQTTServiceProvider
+from iotmessagerouter import IoTMessageRouter
+
+MQTT_SERVER_ADDRESS = "10.0.0.145"
+MQTT_CLIENT_NAME = "fox-flow"
+
+#Internal events manager
+#Processes events in its own thread
+em = EventsManager()
+
+#Create object to loop over USB ports and watch for new connection/disconnections
+usbPortWatcher = USBPortWatcher(em)
+#It will generate 'usb-connection' events (probably like internal MQTT topics).
+#It listens to X
+
+#Create object to manage list of connected devices
+usbDeviceManager = USBDeviceManager(em)
+#Listens to usb connection events and creates/destroys devices in response
+#Generates events: X
+
+##Create object to manage connection to and communications with MQTT server
+mqttServiceProvider = MQTTServiceProvider(MQTT_CLIENT_NAME, MQTT_SERVER_ADDRESS)
+## Has subscription/publish methods
+
+
+##Create IoTMessageRouter(em, mqttClient)
+##TODO: Make one interface/router per device/component?
+iotMessageRouter = IoTMessageRouter(em, mqttServiceProvider)
+#Watches a set of internal events we want to be broadcast over MQTT
+#subscribes to events and publishes to mqttclient.
+#Could later essentially implement flow diagrams here.

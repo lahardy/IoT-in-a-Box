@@ -1,0 +1,53 @@
+<html>
+<head>
+<title>Raspberry Pi Camera Controller</title>
+</head>
+<body>
+<center><h1>Raspberry Pi Camera Controller</h1></center>
+<center><img src="stream.mjpg" width="640" height="480"></center>
+<center><div><button onclick="publish('Rpi-Fox-camera/command', {'command': 'take-photo', 'params':{'name':'awesomestimage.jpg'}})">Take single Photo</button></div></center>
+<center><div><button onclick="publish('Rpi-Fox-camera/command', {'command': 'timelapse', 'params':{'name':'timelapse', 'number': 5, 'seconds_delay':5}})">Take Timelapse</button></div$
+<center><div><button onclick="publish('roll-call/who-there', {})">Roll Call</button></div$
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+<script>
+// Create a client instance
+client = new Paho.MQTT.Client("10.0.0.150", 3000, "RPi-Fox");
+
+// set callback handlers
+client.onConnectionLost = onConnectionLost;
+client.onMessageArrived = onMessageArrived;
+
+// connect the client
+client.connect({onSuccess:onConnect});
+
+// called when the client connects
+function onConnect() {
+  // Once a connection has been made, make a subscription and send a message.
+  console.log("Connected to MQTT server.");
+  client.subscribe("roll-call/response");
+  client.subscribe("roll-call/hello");
+  client.subscribe("roll-call/goodbye");
+}
+
+// called when the client loses its connection
+function onConnectionLost(responseObject) {
+  if (responseObject.errorCode !== 0) {
+    console.log("onConnectionLost:"+responseObject.errorMessage);
+  }
+}
+
+// called when a message arrives
+function onMessageArrived(message) {
+  console.log("onMessageArrived:"+message.payloadString);
+}
+
+function publish(topic, message) {
+  str = JSON.stringify(message)
+
+  msg = new Paho.MQTT.Message(str);
+  msg.destinationName = topic
+  client.send(msg)
+}
+</script>
+</html>
