@@ -41,20 +41,21 @@ class EventsManager():
                     print("EventsManager: Removing subscription to", topic)
                 else:
                     keep.append(h)
-            self.subscriptions[topic] = keep 
+            self.subscriptions[topic] = keep
 
-    def publish(self, event):
-        self.eventsQueue.append(event)
+    def publish(self, topic, message):
+        message["topic"] = topic
+        self.eventsQueue.append(message)
 
     def handleEvents(self):
         while True:
             try:
                 handlers = []
-                event = self.eventsQueue.pop(0)
+                message = self.eventsQueue.pop(0)
                 try:
-                    handlers = self.subscriptions[event["topic"]]
+                    handlers = self.subscriptions[message["topic"]]
                     for handler in handlers:
-                        handler(event)
+                        handler(message)
                 except:
                     pass
             except:

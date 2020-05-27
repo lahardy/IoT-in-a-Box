@@ -9,12 +9,12 @@ class USBPortWatcher():
     def __init__(self):
         self.em = EventsManager()
         self.connectedUSBPorts = []
-        self.run()
+        self.watchUSB()
 
     def getUSBPorts(self):
         return self.connectedUSBPorts
 
-    def watch_usb(self):
+    def _watchUSB(self):
         prev_usb_ports = []
         while True:
 
@@ -30,22 +30,20 @@ class USBPortWatcher():
                 if not short_port_name in prev_usb_ports:
                     port = '/dev/' + short_port_name
                     print("USBWatcher: New device found on port", port)
-                    event = {"topic":"usb-connect","port":port}
-                    self.em.publish(event)
+                    self.em.publish("usb-connect", {"port":port})
 
             # look for usb disconnections
             for short_port_name in prev_usb_ports:
                 if not short_port_name in usb_ports:
                     port = '/dev/' + short_port_name
                     print("USBWatcher: Device removed from port", port)
-                    event = {"topic":"usb-disconnect","port":port}
-                    self.em.publish(event)
+                    self.em.publish("usb-disconnect", {"port":port})
 
             # save list for next pass around
             prev_usb_ports = usb_ports
             self.connectedUSBPorts = usb_ports
             sleep(.2)
 
-    def run(self):
-        t = threading.Thread(target=self.watch_usb)
+    def watchUSB(self):
+        t = threading.Thread(target=self._watchUSB)
         t.start()

@@ -20,13 +20,14 @@ class RhizoDevice():
         self.serialConnection = SerialConnection(port, self.addToMessageQueue)
         self.processMessageQueue()
 
-        self.sendCommand("devices", None) #request info about what components are on the device
-        self.sendCommand("interval", 2) #sets the data-sending rate to 1 second
+        self.sendCommand({"command":"devices", "params":None}) #request info about what components are on the device
+        self.sendCommand({"command":"interval", "params":2}) #sets the data-sending rate to 1 second
         print("Device: Done Initializing.")
 
     def destroy(self):
         for componentID in self.components:
-            self.em.publish({"topic":"component-removed","componentID":componentID})    
+            self.em.unsubscribe(self.sendCommand)
+            self.em.publish("component-removed",{"componentID":componentID})    
         self.serialConnection.closeConnection()
         self.serialConnection = False
         self.abort = True
@@ -34,9 +35,10 @@ class RhizoDevice():
     def addComponent(self, component_name):
         componentID = "%s/%s" % (self.port, component_name)
         if not componentID in self.components:
-            self.components[componentID] = Component(componentID, self.sendCommand)
-            self.em.publish({"topic":"component-added","componentID":componentID})
-        self.sendCommand("%s: info" % component_name, None)  #request info about this component
+            self.components[componentID] = Component(componentID)
+            self.em.publish("component-added",{"componentID":componentID})
+            self.em.subscribe("%s/command" % componentID, self.sendCommand)
+        self.sendCommand({"command":"%s: info" % component_name, "params": None})  #request info about this component
 
     def updateComponents(self, component_name, key, value):
         componentID = "%s/%s" % (self.port, component_name)
@@ -45,23 +47,13 @@ class RhizoDevice():
         else:
             self.addComponent(component_name)
 
-    def getComponentByID(self, componentID):
-        result = False
-        if componentID in self.components:
-            result = self.components[componentID]
-        return result
-
-    def getComponentIDsList(self):
-        list = []
-        for componentID in self.components:
-            list.append(componentID)
-        return list
-
     #messaging related methods
-    def sendCommand(self, command, value):
+    def sendCommand(self, message):
+        command = message["command"]
+        params = message["params"]
         try:
-            if value is not None:
-                msg = "%s %s" % (command, value)
+            if params is not None:
+                msg = "%s %s" % (command, params)
                 self.serialConnection.writeMessage(msg)
             else:
                 msg = command

@@ -1,0 +1,309 @@
+diff --git a/mypatch.patch b/mypatch.patch
+index a314679..e69de29 100644
+--- a/mypatch.patch
++++ b/mypatch.patch
+@@ -1,304 +0,0 @@
+-diff --git a/flow/component.py b/flow/component.py
+-index 706c4f0..984e04f 100644
+---- a/flow/component.py
+-+++ b/flow/component.py
+-@@ -5,7 +5,7 @@ class Component():
+-         self.id = id
+-         self.info = {}
+-         self.em = EventsManager()
+--        self.em.subscribe("%s/info", self.getInfo)
+-+        self.em.subscribe("%s/info-request" % id, self.getInfo)
+- 
+-     def getID(self):
+-         return self.id
+-diff --git a/mypatch.patch b/mypatch.patch
+-index dc205ab..e69de29 100644
+---- a/mypatch.patch
+-+++ b/mypatch.patch
+-@@ -1,286 +0,0 @@
+--diff --git a/flow/camera.py b/flow/camera.py
+--index 4da606c..2820fc3 100644
+----- a/flow/camera.py
+--+++ b/flow/camera.py
+--@@ -3,7 +3,6 @@ import io
+-- import threading
+-- import picamera
+-- 
+---
+-- class Camera(object):
+--     thread = None  # background thread that reads frames from camera
+--     frame = None  # current frame is stored here by background thread
+--diff --git a/flow/cameracontroller.py b/flow/cameracontroller.py
+--index c412b2d..a7e167f 100755
+----- a/flow/cameracontroller.py
+--+++ b/flow/cameracontroller.py
+--@@ -18,8 +18,8 @@ class CameraController:
+--         self.commandQueue = []
+--         self.run()
+-- 
+---        self.em.subscribe("Rpi-fox-camera/command", self.sendCommand)
+---        self.em.publish("component-added", {"componentID":"Rpi-fox-camera"})
+--+        self.em.subscribe("%s/command" % self.ID, self.sendCommand)
+--+        self.em.publish("component-added", {"componentID":self.ID})
+-- 
+--     def getID(self):
+--         return self.ID
+--@@ -69,4 +69,4 @@ class CameraController:
+-- 
+--     def run(self):
+--         t = threading.Thread(target=self._processCommandQueue)
+---        t.start()
+--+        t.start()
+--\ No newline at end of file
+--diff --git a/flow/component.py b/flow/component.py
+--index 1e1420b..706c4f0 100644
+----- a/flow/component.py
+--+++ b/flow/component.py
+--@@ -1,16 +1,17 @@
+-- from eventsmanager import EventsManager
+-- 
+-- class Component():
+---    def __init__(self, id, sendCommand):
+--+    def __init__(self, id):
+--         self.id = id
+--         self.info = {}
+---        self.sendCommand = sendCommand
+--         self.em = EventsManager()
+--+        self.em.subscribe("%s/info", self.getInfo)
+-- 
+--     def getID(self):
+--         return self.id
+-- 
+--     def getInfo(self):
+--+        self.em.publish("%s/info" % self.id, {"info": self.info})
+--         return self.info
+-- 
+--     def updateInfo(self, key, value):
+--diff --git a/flow/eventsmanager.py b/flow/eventsmanager.py
+--index 7596bd6..59499ae 100644
+----- a/flow/eventsmanager.py
+--+++ b/flow/eventsmanager.py
+--@@ -63,4 +63,4 @@ class EventsManager():
+-- 
+--     def run(self):
+--         t = threading.Thread(target=self.handleEvents)
+---        t.start()
+--+        t.start()
+--\ No newline at end of file
+--diff --git a/flow/iotinterface.py b/flow/iotinterface.py
+--index 7345b11..06594db 100644
+----- a/flow/iotinterface.py
+--+++ b/flow/iotinterface.py
+--@@ -1,45 +1,40 @@
+-- #Internally subscribes to changes in that component, sends them out
+-- #Externally subscribes to componentID/* and parses/sends to component as command/value
+-- 
+---##TODO: Maybe just get the componentID and pass queries to it rather than  keeping the component itself around.
+---##TODO: Re-consider having "announce" be this special method type. Consider having "acknowledge" be something more like "response" or "success"
+---
+-- from eventsmanager import EventsManager
+-- 
+-- class IoTInterface():
+---    def __init__(self, component, mqttProvider):
+---        self.component = component
+---        self.componentID = component.getID()
+---        self.componentInfo = component.getInfo()
+---        self.em = EventsManager()
+--+    def __init__(self, componentID, mqttProvider):
+--+        self.componentID = componentID
+--         self.mqtt = mqttProvider
+--+        self.em = EventsManager()
+-- 
+-- 	#subscribe to external/MQTT events to send in
+--         self.mqtt.subscribe("roll-call/who-there", self.announce)
+-- 
+--         #announce yourself
+---        msg = {"name":self.component.getID(), "info":self.component.getInfo()}
+--+        msg = {"name":self.componentID}
+--         self.mqtt.publish("roll-call/hello", msg)
+-- 
+--         #receive commands addressed to this component
+---        topic = "%s/command" % self.component.getID()
+--+        topic = "%s/command" % self.componentID
+--         self.mqtt.subscribe(topic, self.processIncomingCommand)
+-- 
+--         #subscribe to internal events to send out
+---        topic = "%s/update" % self.component.getID()
+--+        topic = "%s/update" % self.componentID
+--         self.em.subscribe(topic, self.processOutgoingMessage)
+-- 
+--     def destroy(self):
+--         #unsubscribe before I get destroyed.
+--         self.em.unsubscribe(self.processOutgoingMessage)
+-- 
+---        msg = {"name":self.component.getID(), "info":self.component.getInfo()}
+--+        msg = {"name":self.componentID}
+--         self.mqtt.publish("roll-call/goodbye", msg)
+--         self.mqtt.unsubscribe(self.announce)
+--         self.mqtt.unsubscribe(self.processIncomingMessage)
+-- 
+--     def announce(self, message):
+---        msg = {"name":self.component.getID(), "info":self.component.getInfo()}
+--+        msg = {"name":self.componentID}
+--         self.mqtt.publish("roll-call/response", msg)
+-- 
+--     def processOutgoingMessage(self, message):
+--diff --git a/flow/iotinterfacemanager.py b/flow/iotinterfacemanager.py
+--index 141d1d0..14752c9 100644
+----- a/flow/iotinterfacemanager.py
+--+++ b/flow/iotinterfacemanager.py
+--@@ -1,5 +1,3 @@
+---#creates an IoTInterface for each component
+---#e.g. makes each sensor available as an "IoT sensor"
+-- import threading
+-- import json
+-- from time import sleep
+--@@ -22,12 +20,12 @@ class IoTInterfaceManager():
+--             self.createInterface(componentID)
+-- 
+--     def createInterface(self, componentID):
+---        component = self.deviceManager.getComponentByID(componentID)
+---        self.interfaces[componentID] = IoTInterface(component, self.mqttService)
+--+        self.interfaces[componentID] = IoTInterface(componentID, self.mqttService)
+-- 
+--     def onComponentAdded(self, event):
+--         #create a new IoTInterface for each component, to subscribe to that component's topics
+--         componentID = event["componentID"]
+--+        print("New component:", componentID)
+--         if not componentID in self.interfaces:
+--             self.createInterface(componentID)
+-- 
+--diff --git a/flow/mqttserviceprovider.py b/flow/mqttserviceprovider.py
+--index 49fdcd4..4c606bc 100644
+----- a/flow/mqttserviceprovider.py
+--+++ b/flow/mqttserviceprovider.py
+--@@ -1,8 +1,6 @@
+-- #Manages connection to MQTT server.
+-- #Handles subscriptions/publishing to server.
+-- 
+---#TODO: add to queue instead of publishing directly
+---
+-- import paho.mqtt.client as mqtt
+-- import json
+-- import threading
+--@@ -73,4 +71,4 @@ class MQTTServiceProvider:
+-- 
+--     def run(self):
+--         t = threading.Thread(target=self.client.loop_forever)
+---        t.start()
+--+        t.start()
+--\ No newline at end of file
+--diff --git a/flow/rhizodevice.py b/flow/rhizodevice.py
+--index d0fbb95..493afcb 100644
+----- a/flow/rhizodevice.py
+--+++ b/flow/rhizodevice.py
+--@@ -35,7 +35,7 @@ class RhizoDevice():
+--     def addComponent(self, component_name):
+--         componentID = "%s/%s" % (self.port, component_name)
+--         if not componentID in self.components:
+---            self.components[componentID] = Component(componentID, self.sendCommand)
+--+            self.components[componentID] = Component(componentID)
+--             self.em.publish("component-added",{"componentID":componentID})
+--             self.em.subscribe("%s/command" % componentID, self.sendCommand)
+--         self.sendCommand({"command":"%s: info" % component_name, "params": None})  #request info about this component
+--@@ -112,4 +112,4 @@ class RhizoDevice():
+-- 
+--     def processMessageQueue(self):
+--         t = threading.Thread(target=self._processMessageQueue)
+---        t.start()
+--+        t.start()
+--\ No newline at end of file
+--diff --git a/flow/serialconnection.py b/flow/serialconnection.py
+--index 742ed30..b50bfe1 100644
+----- a/flow/serialconnection.py
+--+++ b/flow/serialconnection.py
+--@@ -15,8 +15,6 @@ def crc16_ccitt(message):
+--         crc = crc16_update(crc, ord(c))
+--     return crc
+-- 
+---
+---
+-- class SerialConnection():
+--     def __init__(self, port, handler):
+--         self.port = port
+--@@ -24,7 +22,7 @@ class SerialConnection():
+--         self.abort = False
+--         self.connected = False
+--         self.connection = self.openConnection(port, baud_rate=9600)
+---        self.startReading()
+--+        self.readMessages()
+-- 
+--     # open a new serial connection
+--     def openConnection(self, port, baud_rate):
+--@@ -53,7 +51,7 @@ class SerialConnection():
+--             print("ERROR: SerialConnection, error while writting serial message", e)
+-- 
+--     # read a message from the serial port
+---    def readMessages(self):
+--+    def _readMessages(self):
+--         while True:
+--             if not self.abort:
+--                 message = None
+--@@ -72,6 +70,6 @@ class SerialConnection():
+--             else:
+--                 break
+-- 
+---    def startReading(self):
+---        self.t = threading.Thread(target=self.readMessages)
+--+    def readMessages(self):
+--+        self.t = threading.Thread(target=self._readMessages)
+--         self.t.start()
+--\ No newline at end of file
+--diff --git a/flow/usbportwatcher.py b/flow/usbportwatcher.py
+--index 983307f..fbcfb22 100644
+----- a/flow/usbportwatcher.py
+--+++ b/flow/usbportwatcher.py
+--@@ -9,12 +9,12 @@ class USBPortWatcher():
+--     def __init__(self):
+--         self.em = EventsManager()
+--         self.connectedUSBPorts = []
+---        self.run()
+--+        self.watchUSB()
+-- 
+--     def getUSBPorts(self):
+--         return self.connectedUSBPorts
+-- 
+---    def watch_usb(self):
+--+    def _watchUSB(self):
+--         prev_usb_ports = []
+--         while True:
+-- 
+--@@ -44,6 +44,6 @@ class USBPortWatcher():
+--             self.connectedUSBPorts = usb_ports
+--             sleep(.2)
+-- 
+---    def run(self):
+---        t = threading.Thread(target=self.watch_usb)
+---        t.start()
+--+    def watchUSB(self):
+--+        t = threading.Thread(target=self._watchUSB)
+--+        t.start()
+--\ No newline at end of file
+--diff --git a/flow/webserver.py b/flow/webserver.py
+--index 4a284e9..2a0588c 100644
+----- a/flow/webserver.py
+--+++ b/flow/webserver.py
+--@@ -35,4 +35,4 @@ class WebServer(object):
+--         self.app.add_url_rule(endpoint, endpoint_name, EndpointAction(handler))
+-- 
+--     def run(self):
+---        self.app.run(host='0.0.0.0', port=8000)
+--+        self.app.run(host='0.0.0.0', port=8000)
+--\ No newline at end of file
+--diff --git a/main.py b/main.py
+--index 96518bc..88ed643 100755
+----- a/main.py
+--+++ b/main.py
+--@@ -47,7 +47,6 @@ iotInterfaceManager = IoTInterfaceManager(rhizoDeviceManager, mqttServiceProvide
+-- #subscribes to events and publishes to mqttclient.
+-- 
+-- cameraController = CameraController()
+---iotinterface = IoTInterface(cameraController, mqttServiceProvider)
+-- 
+-- #Create object to loop over USB ports and watch for new connection/disconnections
+-- usbPortWatcher = USBPortWatcher()

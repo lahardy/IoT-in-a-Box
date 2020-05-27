@@ -40,14 +40,13 @@ rhizoDeviceManager = RhizoDeviceManager()
 #Components have methods for getting metadata and state, and setting state.
 
 #IoTDeviceManager creates an IoT interface for every component provided by the devices
-iotInterfaceManager = IoTInterfaceManager(rhizoDeviceManager, mqttServiceProvider)
+iotInterfaceManager = IoTInterfaceManager(mqttServiceProvider)
 #Listens to component-added and component-removed events to update list
 
 #An IoTInterface watches a set of internal events we want to be broadcast over MQTT
 #subscribes to events and publishes to mqttclient.
 
 cameraController = CameraController()
-iotinterface = IoTInterface(cameraController, mqttServiceProvider)
 
 #Create object to loop over USB ports and watch for new connection/disconnections
 usbPortWatcher = USBPortWatcher()

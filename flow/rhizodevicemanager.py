@@ -25,27 +25,14 @@ class RhizoDeviceManager():
         print("DeviceManager: Creating new device.")
         device = RhizoDevice(port)
         self.connectedDevices[port] = device
-        event = {"topic":"device-added", "port": port}
-        self.em.publish(event)
+        self.em.publish("device-added", {"port":port})
 
     def removeDevice(self, port):
         print("DeviceManager: Removing device.")
         device = self.connectedDevices.pop(port)
         device.destroy()
-        event = {"topic":"device-removed"}
-        self.em.publish(event)
-
-##For providing components/info
-    def getComponentByID(self, componentID):
-        component = False
-        for port in self.connectedDevices:
-            device = self.connectedDevices[port]
-            result = device.getComponentByID(componentID)
-            if result:
-                component = result
-                break
-        return component
-
+        self.em.publish("device-removed", {})
+    
     def getComponentIDsList(self):
         list = []
         for port in self.connectedDevices:

@@ -18,13 +18,12 @@ class CameraController:
         self.commandQueue = []
         self.run()
 
-#        self.em.publish({"topic":"new-component", "componentID":"Rpi-fox-camera"})
+        self.em.subscribe("%s/command" % self.ID, self.sendCommand)
+        self.em.subscribe("%s/info-request" % self.ID, self.getInfo)
+        self.em.publish("component-added", {"componentID":self.ID})
 
-    def getID(self):
-        return self.ID
-
-    def getInfo(self):
-        return self.info
+    def getInfo(self, message):
+        self.em.publish("%s/info" % self.ID, {"info": self.info})
 
     def getFrame(self):
         return self.camera.get_frame()
@@ -35,15 +34,15 @@ class CameraController:
         my_file.close()
         print("Image saved successfully to", file)
 
-    def sendCommand(self, command, params):
-         self.commandQueue.append([command, params])
+    def sendCommand(self, message):
+        self.commandQueue.append(message)
 
     def _processCommandQueue(self):
         while True:
             if len(self.commandQueue) > 0:
                 item = self.commandQueue.pop(0)
-                command = item[0]
-                params = item[1]
+                command = item["command"]
+                params = item["params"]
                 if command == "take-photo":
                     file = "/home/pi/IotBox/files/%s" % params['name']
                     self.saveFrameToFile(file)
@@ -69,68 +68,3 @@ class CameraController:
     def run(self):
         t = threading.Thread(target=self._processCommandQueue)
         t.start()
-
-
-
-"""        
-
-        elif payload['command'] == 'timelapse':
-                output = payload['output']
-                number = payload['number']
-                seconds_delay = payload['seconds_delay']
-
-                #make folder 'output' to hold images
-                print("Timelapse images stored in folder " + output)
-                if not os.path.exists(output):
-                        os.makedirs(output)     
-        
-                for x in range(0, number):
-                        print("Taking photo number %d" % x)
-                        take_still("./{}/timelapse_image_{}.jpg".format(output,x))
-                        sleep(seconds_delay) 
-                print("Timelapse complete!")            
-
-        elif payload['command'] == "video":
-                duration = payload['duration']
-                output = payload['output']
-                take_video(duration, output)
-
-        elif payload['command'] == "stop":
-                camera.close()
-
-
-    def send_stream(self):
-        while True:
-            try:
-                if self.next_status == True and self.current_status == False:
-                    self.camera.start_recording(self.stream, format='mjpeg')
-                    self.current_status = True
-                if self.next_status == False and self.current_status == True:
-                    self.camera.stop_recording()
-                    self.current_status = False
-                sleep(.1)
-            except:
-                print("Error!")
-            finally:
-                pass
-
-
-
-class StreamingOutput(object):
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
-        self.condition = threading.Condition()
-
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content and notify all
-            # clients it's available
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
-
-"""

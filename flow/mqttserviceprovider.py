@@ -1,8 +1,6 @@
 #Manages connection to MQTT server.
 #Handles subscriptions/publishing to server.
 
-#TODO: add to queue instead of publishing directly
-
 import paho.mqtt.client as mqtt
 import json
 import threading
@@ -38,7 +36,7 @@ class MQTTServiceProvider:
         for handler in handlers:
             handler(payload)
 
-    def on_publish(client, userdata, res):
+    def on_publish(self, client, userdata, res):
         pass
 
     #Need to connect this to topic:handler

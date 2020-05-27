@@ -15,8 +15,6 @@ def crc16_ccitt(message):
         crc = crc16_update(crc, ord(c))
     return crc
 
-
-
 class SerialConnection():
     def __init__(self, port, handler):
         self.port = port
@@ -24,7 +22,7 @@ class SerialConnection():
         self.abort = False
         self.connected = False
         self.connection = self.openConnection(port, baud_rate=9600)
-        self.startReading()
+        self.readMessages()
 
     # open a new serial connection
     def openConnection(self, port, baud_rate):
@@ -53,7 +51,7 @@ class SerialConnection():
             print("ERROR: SerialConnection, error while writting serial message", e)
 
     # read a message from the serial port
-    def readMessages(self):
+    def _readMessages(self):
         while True:
             if not self.abort:
                 message = None
@@ -72,6 +70,6 @@ class SerialConnection():
             else:
                 break
 
-    def startReading(self):
-        self.t = threading.Thread(target=self.readMessages)
+    def readMessages(self):
+        self.t = threading.Thread(target=self._readMessages)
         self.t.start()
