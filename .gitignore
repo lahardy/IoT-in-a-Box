@@ -2,6 +2,7 @@
 files/
 archive/
 .vscode/
+*.patch
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
