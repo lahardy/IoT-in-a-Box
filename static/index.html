@@ -1,5 +1,6 @@
 <html>
 <head>
+  <script type="text/javascript" src=http://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js> </script>
 <title>Raspberry Pi Camera Controller</title>
 </head>
 <body>
@@ -8,6 +9,13 @@
 <center><div><button onclick="publish('Rpi-Fox-camera/command', {'command': 'take-photo', 'params':{'name':'awesomestimage.jpg'}})">Take single Photo</button></div></center>
 <center><div><button onclick="publish('Rpi-Fox-camera/command', {'command': 'timelapse', 'params':{'name':'timelapse', 'number': 5, 'seconds_delay':5}})">Take Timelapse</button></div$
 <center><div><button onclick="publish('roll-call/who-there', {})">Roll Call</button></div$
+<center>
+  <div>
+    <ul id='lst'>
+      <li>First Item</li>
+    </ul>
+  </div>
+</center>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 <script>
@@ -40,6 +48,7 @@ function onConnectionLost(responseObject) {
 // called when a message arrives
 function onMessageArrived(message) {
   console.log("onMessageArrived:"+message.payloadString);
+  $('#lst').prepend("<li>"+message.payloadString+"</li>");
 }
 
 function publish(topic, message) {
