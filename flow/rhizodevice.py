@@ -32,20 +32,18 @@ class RhizoDevice():
         self.serialConnection = False
         self.abort = True
 
-    def addComponent(self, component_name):
-        componentID = "%s/%s" % (self.port, component_name)
+    def addComponent(self, componentID):
         if not componentID in self.components:
             self.components[componentID] = Component(componentID)
             self.em.publish("component-added",{"componentID":componentID})
             self.em.subscribe("%s/command" % componentID, self.sendCommand)
-        self.sendCommand({"command":"%s: info" % component_name, "params": None})  #request info about this component
+        self.sendCommand({"command":"%s: info" % componentID, "params": None})  #request info about this component
 
-    def updateComponents(self, component_name, key, value):
-        componentID = "%s/%s" % (self.port, component_name)
+    def updateComponents(self, componentID, key, value):
         if componentID in self.components:
             self.components[componentID].updateInfo(key, value)
         else:
-            self.addComponent(component_name)
+            self.addComponent(componentID)
 
     #messaging related methods
     def sendCommand(self, message):
